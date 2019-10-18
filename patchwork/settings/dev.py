@@ -106,6 +106,4 @@ if dbbackup:
 # Patchwork settings
 #
 
-ENABLE_XMLRPC = True
-
 ENABLE_REST_API = True
