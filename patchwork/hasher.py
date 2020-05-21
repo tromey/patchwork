@@ -13,6 +13,8 @@ import sys
 
 HUNK_RE = re.compile(r'^\@\@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? \@\@')
 FILENAME_RE = re.compile(r'^(---|\+\+\+) (\S+)')
+DIFF_RE = re.compile(r'^diff --git')
+CHANGEID_RE = re.compile(r'^\s*Change-Id:\s+(\S+)$')
 
 
 def hash_diff(diff):
@@ -25,9 +27,24 @@ def hash_diff(diff):
     prefixes = ['-', '+', ' ']
     hashed = hashlib.sha1()
 
+    seen_diff = False
+
     for line in diff.split('\n'):
         if len(line) <= 0:
             continue
+
+        # Prefer a Change-Id trailer.
+        change_match = CHANGEID_RE.match(line)
+        if change_match:
+            return change_match.group(1)
+
+        # Only process patch lines after the first "diff" is seen.
+        # This prevents including the commit text in the hash.
+        if not seen_diff:
+            if DIFF_RE.match(line):
+                seen_diff = True
+            else:
+                continue
 
         hunk_match = HUNK_RE.match(line)
         filename_match = FILENAME_RE.match(line)
