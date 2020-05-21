@@ -493,8 +493,10 @@ class Patch(Submission):
         if not hasattr(self, 'state') or not self.state:
             self.state = get_default_initial_patch_state()
 
-        if self.hash is None and self.diff is not None:
-            self.hash = hash_diff(self.diff)
+        if self.hash is None:
+            # FIXME look for the change-id tag here
+            if self.diff is not None:
+                self.hash = hash_diff(self.diff)
 
         super(Patch, self).save(**kwargs)
 

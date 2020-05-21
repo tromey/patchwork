@@ -18,4 +18,10 @@
     <field type="CharField" name="abbrev">T</field>
     <field type="BooleanField" name="show_column">True</field>
   </object>
+  <object pk="4" model="patchwork.tag">
+    <field type="CharField" name="name">Change-Id</field>
+    <field type="CharField" name="pattern">^Change-Id:</field>
+    <field type="CharField" name="abbrev">C</field>
+    <field type="BooleanField" name="show_column">False</field>
+  </object>
 </django-objects>

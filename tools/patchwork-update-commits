@@ -13,8 +13,19 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
+get_patchwork_hash() {
+    local hash
+
+    hash=$(git show -s --format='%(trailers)' "$1" | sed -n -e 's/^Change-Id: \(.*\)$/\1/p')
+    if test -z "$hash"; then
+	hash=$(git diff "$1~..$1" | python $PW_DIR/hasher.py)
+    fi
+    echo "$hash"
+    test -n "$hash"
+}
+
 git rev-list --reverse "$@" |
 while read -r commit; do
-    hash=$(git diff "$commit~..$commit" | python "$PW_DIR/hasher.py")
+    hash=$(get_patchwork_hash "$commit")
     pwclient update -s Accepted -c "$commit" -h "$hash"
 done

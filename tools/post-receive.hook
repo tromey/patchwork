@@ -23,7 +23,11 @@ trap "do_exit=1" INT
 
 get_patchwork_hash() {
     local hash
-    hash=$(git diff "$1~..$1" | python $PW_DIR/hasher.py)
+
+    hash=$(git show -s --format='%(trailers)' "$1" | sed -n -e 's/^Change-Id: \(.*\)$/\1/p')
+    if test -z "$hash"; then
+	hash=$(git diff "$1~..$1" | python $PW_DIR/hasher.py)
+    fi
     echo "$hash"
     test -n "$hash"
 }
