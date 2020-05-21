@@ -11,9 +11,10 @@ import hashlib
 import re
 import sys
 
+from patchwork.parser import parse_patch
+
 HUNK_RE = re.compile(r'^\@\@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? \@\@')
 FILENAME_RE = re.compile(r'^(---|\+\+\+) (\S+)')
-DIFF_RE = re.compile(r'^diff --git')
 CHANGEID_RE = re.compile(r'^\s*Change-Id:\s+(\S+)$')
 
 
@@ -27,24 +28,9 @@ def hash_diff(diff):
     prefixes = ['-', '+', ' ']
     hashed = hashlib.sha1()
 
-    seen_diff = False
-
     for line in diff.split('\n'):
         if len(line) <= 0:
             continue
-
-        # Prefer a Change-Id trailer.
-        change_match = CHANGEID_RE.match(line)
-        if change_match:
-            return change_match.group(1)
-
-        # Only process patch lines after the first "diff" is seen.
-        # This prevents including the commit text in the hash.
-        if not seen_diff:
-            if DIFF_RE.match(line):
-                seen_diff = True
-            else:
-                continue
 
         hunk_match = HUNK_RE.match(line)
         filename_match = FILENAME_RE.match(line)
@@ -78,12 +64,46 @@ def hash_diff(diff):
     return hashed.hexdigest()
 
 
+def hash_comment(comment):
+    """Look for a Change-Id in the comment and return it, or None."""
+    # normalise spaces
+    comment = comment.replace('\r', '')
+    comment = comment.strip() + '\n'
+
+    for line in diff.split('\n'):
+        change_match = CHANGEID_RE.match(line)
+        if change_match:
+            return change_match.group(1)
+
+    return None
+
+
+def hash_comment_or_diff(comment, diff):
+    """Generate a hash from comment or a diff.
+
+    A Change-Id in the comment is preferred; but if it is not available,
+    then the diff will be hashed."""
+    result = None
+    if comment is not None:
+        result = hash_comment(comment)
+    if result is None and diff is not None:
+        result = hash_diff(diff)
+    return result
+
+
+def split_and_hash(text):
+    """Split the text into a comment and a patch, then use hash_comment_or_diff."""
+
+    (patch, comment) = parse_patch(text)
+    return hash_comment_or_diff(comment, patch)
+
+
 def main(args):
     """Hash a diff provided by stdin.
 
     This is required by scripts found in /tools
     """
-    print(hash_diff('\n'.join(sys.stdin.readlines())))
+    print(split_and_hash('\n'.join(sys.stdin.readlines())))
 
 
 if __name__ == '__main__':
